@@ -1,1 +1,57 @@
 
+name: Scraping Barrages Maroc (Quotidien)
+
+on:
+  schedule:
+    # Exécution tous les jours à 9h15 UTC (10h15 Maroc hiver, 11h15 été)
+    # Après publication MEE vers 8h-9h
+    - cron: '15 9 * * *'
+  
+  # Permet exécution manuelle
+  workflow_dispatch:
+
+jobs:
+  scrape-and-store:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 psycopg2-binary
+      
+      - name: Run scraping script
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: |
+          python scraper_barrages_maroc.py
+      
+      - name: Upload JSON artifact (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: barrages-data-${{ github.run_number }}
+          path: barrages_data.json
+          retention-days: 90
+      
+      - name: Commit and push if changed (optionnel)
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'bot@github.com'
+          git add -A
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update barrages data $(date +'%Y-%m-%d')" && git push)
+        continue-on-error: true
+      
+      - name: Notification on failure
+        if: failure()
+        run: |
+          echo "⚠️ Le scraping a échoué. Vérifier les logs."
+          # Optionnel: Webhook Discord/Slack/Email

@@ -9,20 +9,25 @@ jobs:
   scrape-and-store:
     runs-on: ubuntu-latest
     steps:
+      # الخطوة 1: استدعاء الكود من المستودع (هذه هي الخطوة التي كانت تفشل)
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      # الخطوة 2: تهيئة بايثون
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # الخطوة 3: تثبيت المكتبات مباشرة لتجنب خطأ الملفات المفقودة
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # تثبيت المكتبات مباشرة لضمان عدم توقف المحرك
           pip install pandas requests beautifulsoup4 lxml supabase python-dotenv
 
+      # الخطوة 4: تشغيل السكربت مع المفاتيح السرية
       - name: Run scraping script
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

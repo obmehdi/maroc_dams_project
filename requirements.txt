@@ -1,7 +1,14 @@
-pandas
-requests
-beautifulsoup4
-lxml
-psycopg2-binary
-supabase
-python-dotenv
+# requirements.txt
+# Dépendances Python pour le scraping des barrages
+# À placer à la RACINE du projet
+
+# Web Scraping
+requests==2.31.0
+beautifulsoup4==4.12.3
+lxml==5.1.0
+
+# Database PostgreSQL
+psycopg2-binary==2.9.9
+
+# Utilities
+python-dotenv==1.0.1

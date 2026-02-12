@@ -1,0 +1,65 @@
+# .github/workflows/scrape_barrages.yml
+# WORKFLOW CORRIGÉ - Installation explicite des dépendances
+
+name: Scraping Barrages Maroc
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 9 * * *'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip
+      
+      - name: Install dependencies explicitly
+        run: |
+          pip install requests==2.31.0
+          pip install beautifulsoup4==4.12.3
+          pip install lxml==5.1.0
+          pip install psycopg2-binary==2.9.9
+          pip install python-dotenv==1.0.1
+      
+      - name: Verify installations
+        run: |
+          python -c "import requests; print('✓ requests installed')"
+          python -c "import bs4; print('✓ beautifulsoup4 installed')"
+          python -c "import psycopg2; print('✓ psycopg2 installed')"
+          python -c "import dotenv; print('✓ python-dotenv installed')"
+      
+      - name: List Python packages
+        run: pip list
+      
+      - name: Run scraping script
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: |
+          echo "Starting scraper..."
+          python scripts/scraper_barrages_maroc.py
+      
+      - name: Upload JSON artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: barrages-data-${{ github.run_number }}
+          path: barrages_data.json
+          retention-days: 90
+      
+      - name: Show error details
+        if: failure()
+        run: |
+          echo "❌ Scraping failed"
+          echo "Check the logs above for details"

@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 from datetime import datetime
-import psycopg2-binary
+import psycopg2
 from psycopg2.extras import execute_values
 import logging
 

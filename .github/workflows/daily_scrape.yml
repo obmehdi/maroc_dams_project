@@ -1,17 +1,19 @@
-# .github/workflows/scrape_barrages.yml
-# VERSION ULTRA-SIMPLIFIÉE - N'utilise PAS requirements.txt
+# .github/workflows/daily_scrape.yml
+# WORKFLOW FINAL CORRIGÉ
 
 name: Scraping Barrages Maroc
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '15 9 * * *'
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
       
       - name: Setup Python 3.11
@@ -19,68 +21,36 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Show current directory
+      - name: Install dependencies
         run: |
-          echo "📂 Current directory:"
-          pwd
-          echo ""
-          echo "📋 Files in current directory:"
-          ls -la
-          echo ""
-          echo "📋 Files in scripts directory:"
-          ls -la scripts/ || echo "❌ scripts/ directory not found"
-      
-      - name: Install dependencies directly
-        run: |
-          echo "🔧 Installing Python packages..."
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 lxml psycopg2-binary python-dotenv
-          echo "✅ Installation complete"
       
-      - name: Verify psycopg2 installation
+      - name: Verify installations
         run: |
-          echo "🧪 Testing psycopg2..."
-          python -c "import psycopg2; print('✅ psycopg2 version:', psycopg2.__version__)"
-      
-      - name: Show Python environment
-        run: |
-          echo "🐍 Python version:"
-          python --version
-          echo ""
-          echo "📦 Installed packages:"
-          pip list
+          python -c "import psycopg2; print('✅ psycopg2:', psycopg2.__version__)"
+          python -c "import requests; print('✅ requests:', requests.__version__)"
+          python -c "import bs4; print('✅ beautifulsoup4 installed')"
       
       - name: Run scraping script
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
         run: |
           echo "🚀 Starting scraper..."
-          echo "📂 Looking for script in: scripts/scraper_barrages_maroc.py"
-          
-          if [ -f "scripts/scraper_barrages_maroc.py" ]; then
-            echo "✅ Script found!"
-            python scripts/scraper_barrages_maroc.py
-          else
-            echo "❌ Script NOT found at scripts/scraper_barrages_maroc.py"
-            echo "📋 Available Python files:"
-            find . -name "*.py" -type f
-            exit 1
-          fi
+          python scripts/scraper_barrages_maroc.py
       
-      - name: Upload results
+      - name: Upload JSON artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: barrages-data-${{ github.run_number }}
           path: barrages_data.json
-          retention-days: 30
+          retention-days: 90
       
-      - name: Show detailed error
+      - name: Notify on success
+        if: success()
+        run: echo "✅ Scraping completed successfully!"
+      
+      - name: Notify on failure
         if: failure()
-        run: |
-          echo "❌❌❌ WORKFLOW FAILED ❌❌❌"
-          echo ""
-          echo "Please check:"
-          echo "1. Script exists at: scripts/scraper_barrages_maroc.py"
-          echo "2. DATABASE_URL secret is set correctly"
-          echo "3. No typos in the script name"
+        run: echo "❌ Scraping failed. Check logs above."
